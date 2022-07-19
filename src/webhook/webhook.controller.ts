@@ -1,10 +1,12 @@
 import { Controller, Get, Post, Query, Body, HttpCode } from '@nestjs/common';
 import { WebhookService } from './webhook.service';
 
-@Controller('webhook')
+@Controller('webhook') // localhost:5000/webhook
 export class WebhookController {
 
-    constructor(private webhookService: WebhookService) {}
+    constructor(
+        private webhookService: WebhookService
+    ) { }
 
     @Get()
     @HttpCode(200)
@@ -25,14 +27,32 @@ export class WebhookController {
         return this.webhookService.post(body)
     }
 
-    @Post('subscribe')
+    @Get('subscribe') // localhost:5000/webhook/subscribe
     subscribeToWebhook(
+        @Query() query: { userId: string }
+    ) {
+        return this.webhookService.subscribe(query.userId)
+    }
+
+    @Post('register')
+    registerFacebook(
         @Query() query: {
-            pageId: string,
-            pageAccessToken: string
+            userAccessToken: string,
+            subId: string,
+            instanceId: string
         }
     ) {
-        return this.webhookService.subscribe(query.pageId, query.pageAccessToken)
+        return this.webhookService.register(query)
+    }
+
+    @Get('test')
+    testing(
+        @Query() query: {
+            userAccessToken: string,
+            userId: string
+        }
+    ) {
+        return this.webhookService.testing(query.userAccessToken, query.userId)
     }
 
 }
