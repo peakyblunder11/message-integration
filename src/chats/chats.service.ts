@@ -11,6 +11,31 @@ export class ChatsService {
     async getMessages(subId: string) {
         this.repository.metadata.tablePath = `${subId}_messages`
 
-        return await this.repository.find()
+        return await this.repository.find({
+            take: 10
+        })
     }
+
+    async saveMessages(subId: string, data: MessageEntity) {
+        this.repository.metadata.tablePath = `${subId}_messages`
+
+        const message = this.repository.create(data)
+        return await this.repository.insert(message)
+    }
+
+    async updateMessage(
+        subId: string,
+        instanceId: string,
+        data: MessageEntity) 
+    {
+        this.repository.metadata.tablePath = `${subId}_messages`
+
+        const room = this.repository.createQueryBuilder()
+                                    .update(MessageEntity)
+                                    .set(data).where('instance_id = :id', { id: instanceId })
+                                    .execute()
+        
+        return room
+    }
+
 }

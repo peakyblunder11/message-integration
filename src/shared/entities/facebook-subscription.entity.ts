@@ -1,34 +1,36 @@
-import { Entity,  Column, CreateDateColumn, UpdateDateColumn } from 'typeorm'
+import { Entity, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm'
 
 @Entity()
-// @Unique(['userId'])
 export class FacebookSubscription {
-    // @PrimaryGeneratedColumn()
-    // public id: number
-    @Column({ type: 'varchar', length: 255, primary: true})
-    public userId: string
 
-    @Column({ type: 'varchar', length: 255 })
-    public accessToken: string
-
-    @Column({ type: 'varchar', length: 255, nullable: true })
+    @Column({ type: 'varchar', length: 255, nullable: true, primary: true })
     public instanceId: string
-
-    @Column('varchar', { array: true })
-    public pages: string[]
-
-    @Column({ type: 'varchar', length: 255 })
-    public email: string
-
-    @Column({ type: 'varchar', length: 255 })
-    public fullName: string
-
-    @Column({ type: 'varchar', length: 255, })
+    
+    @Column({ type: 'varchar', length: 255, nullable: true })
     public subId: string
 
-    @CreateDateColumn({type: 'timestamp'})
+    @Column({ type: 'varchar', length: 255, nullable: true })
+    public userId: string
+
+    @Column({ type: 'varchar', length: 255, nullable: true })
+    public userAccessToken: string
+
+    @Column({ type: 'varchar', length: 255, primary: true })
+    public pageId: string
+
+    @Column({ type: 'varchar', length: 255, nullable: true })
+    public pageAccessToken: string
+
+    @Column({ type: 'varchar', length: 255, nullable: true })
+    public pageName: string
+
+    @Column({ type: 'varchar', length: 255, nullable: true })
+    public ownerName: string
+
+    @CreateDateColumn({ type: 'timestamp' })
     public createdAt: Date
 
-    @UpdateDateColumn({type: 'timestamp'})
+    @UpdateDateColumn({ type: 'timestamp' })
     public updatedAt: Date
+
 }

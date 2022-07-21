@@ -86,8 +86,27 @@ export class GraphApiService {
 
     async subscribeWebhook(pageId: string, pageAccessToken: string) {
         try {
-            const response = await axios.post(`${this.baseApi}/${pageId}/subscribed_apps`, {
+            const response = await axios.post(`https://graph.facebook.com/${pageId}/subscribed_apps?subscribed_fields=feed&access_token=${pageAccessToken}`)
+
+            return response.data
+        } catch (e) {
+            return e
+        }
+    }
+
+    async sendMessage(from: string, to: string, platform: string, message: string, pageAccessToken: string) {
+        try {
+            const url = `${this.baseApi}/${from}/messages`
+            const response = await axios.post(url, {}, {
                 params: {
+                    recipient: {
+                        id: to
+                    },
+                    message: {
+                        text: message
+                    },
+                    messaging_type: 'MESSAGE_TAG',
+                    tag: 'HUMAN_AGENT',
                     access_token: pageAccessToken
                 }
             })

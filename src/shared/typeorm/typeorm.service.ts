@@ -19,7 +19,7 @@ export class TypeOrmConfigService implements TypeOrmOptionsFactory {
             entities: [__dirname + '/../**/*.entity.{ts,js}'],
             migrations: ['dist/migrations/*.{ts,js}'],
             migrationsTableName: 'typeorm_migrations',
-            synchronize: true, // !! Hapus Kalo udah Masuk Production
+            synchronize: false, // !! Hapus Kalo udah Masuk Production
             logger: 'file',
         }
     }

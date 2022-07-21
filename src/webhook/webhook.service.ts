@@ -1,10 +1,11 @@
 import { ConfigService } from '@nestjs/config'
-import { HttpException, HttpStatus, Injectable, HttpCode } from '@nestjs/common';
-import { In, Repository } from 'typeorm'
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common'
+import { Repository } from 'typeorm'
 import { FacebookSubscription } from 'src/shared/entities/facebook-subscription.entity'
 import { InjectRepository } from '@nestjs/typeorm'
 import { GraphApiService } from 'src/graph-api/graph-api.service'
-import { RoomsService } from '../rooms/rooms.service';
+import { RoomsService } from '../rooms/rooms.service'
+import { RoomEntity } from '../shared/entities/rooms.entity';
 
 @Injectable()
 export class WebhookService {
@@ -77,12 +78,6 @@ export class WebhookService {
 
                 if ('messaging' in entry) {
                     entry.messaging.forEach(async (event) => {
-
-                        // Sender Id : ID yang Berasal Dari sender yang mengirim pesan
-                        // TODO: SELECT sub_id FROM ... where sender_id = senderId 
-                        // Sender Id Bisa digunakan sebagai unique id yang digunakan untuk mencari sub id
-                        // Sub ID Dipake untuk update create room atau update room
-
                         if ('message' in event) {
                             response = {
                                 channel: 'Facebook',
@@ -92,60 +87,117 @@ export class WebhookService {
                                 timestamp: event.timestamp,
                                 message: event.message.text,
                             }
-    
-                            // const subId = await this.repository.query(
-                            //     `SELECT * FROM facebook_subscription WHERE pages::text similar to '%${response.recipient}%'`
-                            // )
-    
-                            const subscription = await
-                                this.repository.createQueryBuilder('subs')
-                                    .select()
-                                    .where(`subs.pages::text SIMILAR TO '%${response.recipient}%'`)
-                                    .getOne()
-    
-                            if (subscription) {
-                                const subId = subscription.subId
-                                const instanceId = subscription.instanceId
-                                const accessToken = subscription.accessToken
-                                const pages = subscription.pages
-    
-                                console.log('Initial Index', { subId, instanceId, accessToken, pages })
+                            
+                            const messageId = event.message.mid
+                            const subs = await this.repository.findOne({
+                                where: {
+                                    pageId: response.recipient.toString()
+                                }
+                            })
+                            
+                            if (subs) {
+                                console.log(subs)
 
-                                const senderProfile = await this.graphApi.getSenderProfile(accessToken, response.sender)
+                                const instanceId = subs.instanceId
+                                const subId = subs.subId
+                                const date = new Date()
+                                const timestamp = date.getTime()
 
-                                console.log(senderProfile)
+                                const room = await this.roomService.getRoom(subId, instanceId, response.sender.toString())
 
-                                // const data = {
-                                //     phone_number: response.sender,
-                                //     name: '',
-                                //     phone_number_show: '',
-                                //     profile_picture: '',
-                                //     instance_id: instanceId,
-                                //     sync_firestore: false,
-                                //     unread_count: 0,
-                                //     roomId: '',
-                                //     assign_to: {},
-                                //     pinned: false,
-                                //     last_interaction: {},
-                                //     archived: false,
-                                //     room_status: '',
-                                //     unreplied: '',
-                                //     last_reply: '',
-                                //     last_message: '',
-                                //     lastMessage: {},
-                                //     message_from_me: '',
-                                //     roomName: '',
-                                //     roomOwnerId: '',
-                                //     subId,
-                                //     users: {},
-                                //     channel_source: '',
-                                //     last_message_status: '',                                                                        
-                                // }
+                                const data = {
+                                    phone_number: response.sender,
+                                    name: response.sender,
+                                    phone_number_show: response.sender,
+                                    profile_picture: response.sender,
+                                    instance_id: instanceId,
+                                    sync_firestore: false,
+                                    unread_count: 0,
+                                    roomId: `${instanceId}-${response.sender}`,
+                                    pinned: false,
+                                    last_interaction: null,
+                                    assign_to: null,
+                                    archived: false,
+                                    roomStatus: "on_queue",
+                                    unreplied: true,
+                                    last_reply: 0,
+                                    last_message: 0,
+                                    lastMessage: {
+                                        data: {},
+                                        seen: false,
+                                        files: [],
+                                        fromMe: false,
+                                        content: response.message,
+                                        seen_by: [],
+                                        sender_id: response.sender,
+                                        source_id: messageId,
+                                        timestamp: {
+                                            _seconds: 1657619067,
+                                            _nanoseconds: 0
+                                        },
+                                        distributed: true,
+                                        sender_name: response.sender,
+                                        original_message: {
+                                            id: messageId,
+                                            type: "message_create",
+                                            message_create: {
+                                                target: {
+                                                    recipient_id: response.recipient
+                                                },
+                                                sender_id: response.sender,
+                                                message_data: {
+                                                    text: response.message,
+                                                    entities: {
+                                                        urls: [],
+                                                        symbols: [],
+                                                        hashtags: [],
+                                                        user_mentions: []
+                                                    }
+                                                }
+                                            },
+                                            created_timestamp: timestamp
+                                        },
+                                        "content_notification": "New Incoming Message"
+                                    },
+                                    message_from_me: 0,
+                                    roomName: response.sender,
+                                    roomOwnerId: response.recipient,
+                                    roomOwnerName: response.recipient,
+                                    subId: subId,
+                                    users: [
+                                        {
+                                            _id: response.recipient,
+                                            avatar: "wakwaw",
+                                            status: null,
+                                            username: response.recipient
+                                        },
+                                        {
+                                            _id: response.sender,
+                                            avatar: 'blahbloh',
+                                            status: null,
+                                            username: response.sender
+                                        }
+                                    ],
+                                    channel_source: 'Facebook',
+                                    last_message_status: null,
+                                }
 
-                                // return await this.roomService.upsert(subId, instanceId, )
+                                console.log(room)
+
+                                if (room.length) {
+                                    console.log(room)
+                                    const update = await this.roomService.updateRoom(subId, instanceId, data)
+
+                                    console.log(update)
+                                    return update
+                                } else {
+                                    console.log('Room Empty, Insert Data Instead')
+                                    const insert = await this.roomService.saveRoom(subId, data)
+                                    
+                                    console.log(insert)
+                                    return insert
+                                }
                             }
-                            // Insert response to Message
-                            // TODO: INSERT INTO subId_message (KEY) (VALUE)
                         }
 
 
@@ -188,86 +240,79 @@ export class WebhookService {
         }
 
         throw new HttpException('Not Found', HttpStatus.NOT_FOUND)
-    }
+    }    
 
     /**
-     * --------------- Subscribe Webhook ------------------- 
+     * 
+     * @param query 
+     * @param body 
+     * @returns Profile, Long Access Token, Page and Instance Id
+     *  
      */
-    async subscribe(userId) {
-        return this.repository.findOne(userId)
-    }
+    async register(
+        query: {
+            userAccessToken: string,
 
-    /**
-     * --------------- Register User to Webhook ---------------     
-     */
-    async register(query: {
-        userAccessToken: string,
-        subId: string,
-        instanceId: string
-    }) {
+        },
+        body: {
+            subId: string,
+            instanceId: string,
+            page: {
+                id: string,
+                accessToken: string,
+                name: string
+            }
+        }
+    ) {
         const userAccessToken = query.userAccessToken
+        const instanceId = body.instanceId
+        const subId = body.subId
+        const page = body.page
 
-        if (!userAccessToken) throw new HttpException('User Access Token Cannot be Null', HttpStatus.BAD_REQUEST)
-        if (!query.subId) throw new HttpException('Sub Id Token Cannot be Null', HttpStatus.BAD_REQUEST)
-        if (!query.instanceId) throw new HttpException('Instance Id Cannot be Null', HttpStatus.BAD_REQUEST)
-        
-        console.log(query)
+        console.log({ userAccessToken, instanceId, subId, page })
+
         try {
             const profile = await this.graphApi.getUserProfile(userAccessToken)
             const longAccessToken = await this.graphApi.generateLongAccessToken(userAccessToken)
-            const pages = await this.graphApi.getUserPages(userAccessToken)
-            const pageList = []
 
-            if (pages) {
-                pages.data.forEach(async (page) => {
-                    try {
-                        const subscribe = await this.graphApi.subscribeWebhook(page.id, page.access_token)
-                        
-                        pageList.push([page, subscribe])
-                    } catch(e) {
-                        return e
-                    }
-                });
-            }
-
-            const response = {
+            const data = {
+                instanceId,
+                subId,
                 userId: profile.id,
-                fullName: profile.name,
-                email: profile.email,
-                instanceId: query.instanceId,
-                accessToken: longAccessToken.access_token,
-                subId: query.subId,
-                pages: pageList
+                userAccessToken: longAccessToken.access_token,
+                pageId: page.id,
+                pageAccessToken: page.accessToken,
+                pageName: page.name,
+                ownerName: profile.name,
             }
 
-            console.log(response)
+            const subscribePage = await this.graphApi.subscribeWebhook(data.pageId, data.pageAccessToken)
 
-            return response
-            // ! Wakwaw Jangan DI HAPUS
-            // const subscription = await this.repository.save(response)
-            // return ({response, subscription})
+            const subs = await this.repository.save(data)
+
+            console.log({
+                data
+            })
+
+            return { profile, longAccessToken, page, instanceId, subscribePage, subs }
         } catch (e) {
             return e
         }
     }
 
+    // Handling Function
     async handleMessage(subId: string, pageId: string, pageAccessToken: string, response: any) {
-        if (subId) {
-            const subscription = await this.getUserPageList(response)
-            const pages = subscription.pages 
-        }
-
-        return new HttpException('NOT FOUND', HttpStatus.NOT_FOUND)
+        return { subId, pageId, pageAccessToken, response }
     }
 
     async getUserPageList(response: any) {
-            return this.repository.createQueryBuilder('subs')
-                    .select(['subs.subId', 'subs.fullName', 'subs.pages'])
-                    .where(`subs.pages::text SIMILAR TO '%${response.recipient}%'`)
-                    .getOne()        
+        return this.repository.createQueryBuilder('subs')
+            .select(['subs.subId', 'subs.fullName', 'subs.pages'])
+            .where(`subs.pages::text SIMILAR TO '%${response.recipient}%'`)
+            .getOne()
     }
 
-    async testing (userAccessToken, userId) {
+    async testing(userAccessToken, userId) {
         const response = await this.graphApi.getSenderProfile(userAccessToken, userId)
         // const response = await this.graphApi.getUserProfile(userAccessToken)
 
@@ -276,6 +321,33 @@ export class WebhookService {
 
     async subscribePage(pageId: string, pageAccessToken: string) {
         return await this.graphApi.subscribeWebhook(pageId, pageAccessToken)
+    }
+
+    async sendMessage(
+        body: { from: string, to: string, platform: string, message: string, pageAccessToken: string, subId: string, instanceId: string },
+        query: { instanceId: string, subId: string }
+
+    ) {
+        try {
+            const message = await this.graphApi.sendMessage(body.from, body.to, body.platform, body.message, body.pageAccessToken)
+
+            if ('recipient_id' in message) {
+                const room = await this.roomService.getRoom(query.subId, query.instanceId, body.to)
+
+                // const data: RoomEntity = this.insertRoomData(query, body)
+
+                if (room) {
+                    // await this.roomService.updateRoom(query.subId, query.instanceId, data)
+                } else {
+                    // await this.roomService.saveRoom(query.subId, data)
+                }
+            }
+
+            return
+
+        } catch (e) {
+            return e
+        }
     }
 
 }

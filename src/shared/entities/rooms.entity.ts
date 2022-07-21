@@ -30,14 +30,14 @@ export class RoomEntity {
     @Column({ type: 'varchar', nullable: true, length: 255 })
     public roomId: string
 
-    @Column({ type: 'json', nullable: true })
-    public assign_to: any
+    @Column({ type: 'jsonb', nullable: true })
+    public assign_to
 
     @Column({ type: 'boolean', nullable: true, default: false })
     public pinned: boolean
 
-    @Column({ type: 'json', nullable: true })
-    public last_interaction: any
+    @Column({ type: 'jsonb', nullable: true })
+    public last_interaction
 
     @Column({ type: 'boolean', nullable: true, default: false })
     public archived: boolean
@@ -55,7 +55,7 @@ export class RoomEntity {
     public last_message: number
 
     @Column({ type: 'jsonb', nullable: true })
-    public lastMessage: any
+    public lastMessage
 
     @Column({ type: 'bigint', nullable: true })
     public message_from_me: number
@@ -72,8 +72,11 @@ export class RoomEntity {
     @Column({ type: 'varchar', nullable: true, length: 255 })
     public subId: string
 
-    @Column({ type: 'json', nullable: true })
-    public users: any
+    @Column({ type: 'jsonb', nullable: true })
+    public users
+
+    @Column({ type: 'varchar', nullable: true, length: 255 })
+    public channel_source: string
 
     @Column({ type: 'int', nullable: true })
     public last_message_status: number
